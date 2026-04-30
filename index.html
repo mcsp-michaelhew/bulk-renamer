@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BulkRename</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>BulkRename</h1>
+  <p class="tagline">Pattern rules, regex, and CSV mappings — all in the browser</p>
+</header>
+
+<div class="app-layout">
+
+  <!-- ── Left: controls ──────────────────────────────────── -->
+  <aside class="controls-pane">
+    <div class="mode-tabs">
+      <button class="tab active" data-tab="rules">Rules</button>
+      <button class="tab"        data-tab="csv">CSV Mapping</button>
+    </div>
+
+    <!-- ── Rules tab ── -->
+    <div class="tab-panel active" id="tab-rules">
+
+      <!-- 1. Trim & Remove -->
+      <div class="rule-card" id="card-trim">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="trim-on">
+            <span>Trim &amp; Remove</span>
+          </label>
+          <span class="rule-num">1</span>
+        </div>
+        <div class="rule-body">
+          <div class="check-group">
+            <label class="check-label"><input type="checkbox" id="trim-lead"> Leading spaces</label>
+            <label class="check-label"><input type="checkbox" id="trim-trail"> Trailing spaces</label>
+            <label class="check-label"><input type="checkbox" id="trim-spaces"> Remove all spaces</label>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Remove from start</label>
+              <input type="number" id="trim-start" min="0" value="0">
+            </div>
+            <div class="field">
+              <label>Remove from end</label>
+              <input type="number" id="trim-end" min="0" value="0">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Find & Replace -->
+      <div class="rule-card" id="card-fr">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="fr-on">
+            <span>Find &amp; Replace</span>
+          </label>
+          <span class="rule-num">2</span>
+        </div>
+        <div class="rule-body">
+          <div class="field">
+            <label>Find</label>
+            <div class="find-row">
+              <input type="text" id="fr-find" class="flex-input" placeholder="Text or pattern">
+              <label class="pill" title="Regular expression mode — use patterns like \d+ for digits, [abc] for character sets, (foo|bar) for alternatives"><input type="checkbox" id="fr-regex"><span>.*</span></label>
+              <label class="pill" title="Case sensitive — when on, Photo and photo are treated as different words"><input type="checkbox" id="fr-case"><span>Aa</span></label>
+              <label class="pill" title="Whole word — match only complete words. &quot;cat&quot; will match &quot;cats&quot; but not &quot;concatenate&quot;"><input type="checkbox" id="fr-word"><span>\b</span></label>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Preceded by <span class="help" title='Only match when immediately preceded by this text. Example: find "001", preceded by "IMG_" renames IMG_001 but leaves VID_001 unchanged'>?</span></label>
+              <input type="text" id="fr-before" placeholder="Text before match">
+            </div>
+            <div class="field">
+              <label>Followed by <span class="help" title='Only match when immediately followed by this text. Example: find "report", followed by "_final" renames report_final but leaves report_draft unchanged'>?</span></label>
+              <input type="text" id="fr-after" placeholder="Text after match">
+            </div>
+          </div>
+          <div class="field">
+            <label>Replace <small>($1 $2 $& … for groups / whole match)</small></label>
+            <input type="text" id="fr-replace" placeholder="Replacement text">
+          </div>
+          <div class="field-row field-row--wide-left">
+            <div class="field">
+              <label>Max replacements <span class="help" title="Stop replacing after this many matches. Enter 1 to change only one occurrence. Leave blank to replace all">?</span></label>
+              <input type="number" id="fr-maxrep" min="1" placeholder="∞">
+            </div>
+            <div class="field">
+              <label>Direction <span class="help" title="From left replaces the first N matches. From right replaces the last N matches">?</span></label>
+              <select id="fr-dir">
+                <option value="ltr">From left</option>
+                <option value="rtl">From right</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>Apply to</label>
+            <select id="fr-scope">
+              <option value="name">Name only</option>
+              <option value="ext">Extension only</option>
+              <option value="both" selected>Name + Extension</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Case -->
+      <div class="rule-card" id="card-case">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="case-on">
+            <span>Case</span>
+          </label>
+          <span class="rule-num">3</span>
+        </div>
+        <div class="rule-body">
+          <div class="field">
+            <label>Transform</label>
+            <select id="case-type">
+              <option value="lower">lowercase</option>
+              <option value="upper">UPPERCASE</option>
+              <option value="title">Title Case</option>
+              <option value="sentence">Sentence case</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Apply to</label>
+            <select id="case-scope">
+              <option value="name" selected>Name only</option>
+              <option value="ext">Extension only</option>
+              <option value="both">Name + Extension</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Insert at Position -->
+      <div class="rule-card" id="card-ins">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="ins-on">
+            <span>Insert at Position</span>
+          </label>
+          <span class="rule-num">4</span>
+        </div>
+        <div class="rule-body">
+          <div class="field">
+            <label>Text to insert</label>
+            <input type="text" id="ins-text" placeholder="Text to insert">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Position (0 = start)</label>
+              <input type="number" id="ins-pos" min="0" value="0">
+            </div>
+            <div class="field vcenter">
+              <label>&nbsp;</label>
+              <label class="check-label"><input type="checkbox" id="ins-fromend"> From end</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Apply to</label>
+            <select id="ins-scope">
+              <option value="name" selected>Name only</option>
+              <option value="ext">Extension only</option>
+              <option value="both">Name + Extension</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Prefix & Suffix -->
+      <div class="rule-card" id="card-ps">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="ps-on">
+            <span>Prefix &amp; Suffix</span>
+          </label>
+          <span class="rule-num">5</span>
+        </div>
+        <div class="rule-body">
+          <div class="field">
+            <label>Prefix</label>
+            <input type="text" id="ps-prefix" placeholder="Add before name">
+          </div>
+          <div class="field">
+            <label>Suffix <small>(before extension)</small></label>
+            <input type="text" id="ps-suffix" placeholder="Add after name">
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Date -->
+      <div class="rule-card" id="card-date">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="date-on">
+            <span>Date</span>
+          </label>
+          <span class="rule-num">6</span>
+        </div>
+        <div class="rule-body">
+          <div class="field">
+            <label>Format <small>tokens: YYYY MM DD HH mm ss</small></label>
+            <input type="text" id="date-fmt" value="YYYY-MM-DD">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Position</label>
+              <select id="date-pos">
+                <option value="prefix">Prefix</option>
+                <option value="suffix">Suffix</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Separator</label>
+              <input type="text" id="date-sep" value="_" maxlength="5" class="short-input">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Counter -->
+      <div class="rule-card" id="card-ctr">
+        <div class="rule-header">
+          <label class="rule-check">
+            <input type="checkbox" id="ctr-on">
+            <span>Counter</span>
+          </label>
+          <span class="rule-num">7</span>
+        </div>
+        <div class="rule-body">
+          <div class="field-row">
+            <div class="field">
+              <label>Start</label>
+              <input type="number" id="ctr-start" value="1">
+            </div>
+            <div class="field">
+              <label>Step</label>
+              <input type="number" id="ctr-step" value="1">
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Padding <small>(3 → "001")</small></label>
+              <input type="number" id="ctr-pad" min="1" value="1">
+            </div>
+            <div class="field">
+              <label>Separator</label>
+              <input type="text" id="ctr-sep" value="" maxlength="5" placeholder="none" class="short-input">
+            </div>
+          </div>
+          <div class="field">
+            <label>Position</label>
+            <select id="ctr-pos">
+              <option value="prefix">Prefix</option>
+              <option value="suffix" selected>Suffix</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-rules -->
+
+    <!-- ── CSV tab ── -->
+    <div class="tab-panel" id="tab-csv">
+      <p class="csv-desc">
+        Two-column CSV: <code>original_name,new_name</code> per row.
+        Include file extensions in both columns.
+      </p>
+
+      <div class="drop-zone small" id="csv-drop">
+        <span class="drop-icon">📄</span>
+        <p>Drop CSV here or <button class="link-btn" id="csv-browse">browse</button></p>
+        <input type="file" id="csv-input" accept=".csv,text/csv" hidden>
+      </div>
+
+      <div class="or-divider"><span>or paste below</span></div>
+
+      <textarea id="csv-text" rows="10" spellcheck="false"
+        placeholder="original.jpg,renamed.jpg&#10;photo_001.png,vacation_2024.png"></textarea>
+
+      <button class="btn-secondary" id="csv-apply">Apply CSV</button>
+
+      <div id="csv-status" class="csv-status"></div>
+    </div>
+
+  </aside>
+
+  <!-- ── Right: upload + preview ─────────────────────────── -->
+  <main class="main-pane">
+
+    <div class="drop-zone" id="file-drop">
+      <span class="drop-icon">⬆</span>
+      <p class="drop-text">Drop files or a ZIP archive here</p>
+      <p class="drop-hint">or <button class="link-btn" id="file-browse">browse files</button></p>
+      <input type="file" id="file-input" multiple hidden>
+    </div>
+
+    <div class="drop-meta">
+      <button class="info-btn" id="limit-info-btn" aria-label="View file size limits">ⓘ File limits</button>
+    </div>
+
+    <div id="limit-info" class="limit-info hidden" role="status">
+      <strong>File limits</strong>
+      <ul>
+        <li><strong>ZIP archives:</strong> max 500 MB compressed. ZIPs with over 200 MB of uncompressed content may be slow to process.</li>
+        <li><strong>File count:</strong> max 2,000 files per batch. Use Clear and re-upload to process the rest.</li>
+        <li><strong>CSV mappings:</strong> max 1 MB. Trim unused rows or split into multiple CSVs for large sets.</li>
+      </ul>
+    </div>
+
+    <div id="file-status" class="file-status hidden"></div>
+
+    <div class="preview-pane">
+      <div class="preview-toolbar">
+        <span class="preview-title">Preview</span>
+        <span class="badge" id="file-badge">0 files</span>
+        <div class="toolbar-actions">
+          <span id="dupe-warning" class="dupe-warn hidden">⚠ duplicate names</span>
+          <button class="btn-ghost" id="clear-btn">Clear</button>
+        </div>
+      </div>
+
+      <div class="preview-toolbar-search">
+        <input type="search" class="search-input" id="file-search" placeholder="Filter files…">
+        <select class="sort-select" id="file-sort">
+          <option value="name-asc">Name ↑</option>
+          <option value="name-desc">Name ↓</option>
+          <option value="ext">Extension</option>
+          <option value="changed">Changed only</option>
+        </select>
+      </div>
+
+      <div class="selection-bar hidden" id="selection-bar">
+        <span class="selection-count" id="selection-count"></span>
+        <div class="folder-input-wrap hidden" id="folder-input-wrap">
+          <input type="text" class="folder-input" id="folder-input" placeholder="Folder name…">
+          <button class="btn-secondary folder-btn" id="folder-confirm-btn">Assign</button>
+          <button class="btn-ghost" id="folder-cancel-btn">Cancel</button>
+        </div>
+        <button class="btn-secondary sel-action-btn" id="sel-folder-btn">Move to folder</button>
+        <button class="btn-ghost sel-action-btn" id="sel-unfolder-btn">Remove from folder</button>
+        <button class="btn-ghost sel-action-btn" id="sel-delete-btn" style="color: var(--error-fg)">Delete selected</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="preview-table">
+          <thead>
+            <tr><th class="col-check"><input type="checkbox" id="select-all"></th><th>Original</th><th>Renamed</th><th></th></tr>
+          </thead>
+          <tbody id="preview-tbody">
+            <tr class="empty-row"><td colspan="4">Upload files to see a preview</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-primary" id="download-btn" disabled>Rename &amp; Download ZIP</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
