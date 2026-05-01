@@ -22,7 +22,12 @@ const fileBrowse  = document.getElementById('file-browse');
 const previewTbody = document.getElementById('preview-tbody');
 const fileBadge   = document.getElementById('file-badge');
 const clearBtn    = document.getElementById('clear-btn');
-const downloadBtn = document.getElementById('download-btn');
+const downloadBtn     = document.getElementById('download-btn');
+const applyBtn        = document.getElementById('apply-btn');
+const applyConfirm    = document.getElementById('apply-confirm');
+const applyConfirmMsg = document.getElementById('apply-confirm-msg');
+const applyConfirmYes = document.getElementById('apply-confirm-yes');
+const applyConfirmNo  = document.getElementById('apply-confirm-no');
 const dupeWarn    = document.getElementById('dupe-warning');
 const csvDrop     = document.getElementById('csv-drop');
 const csvInput    = document.getElementById('csv-input');
@@ -296,7 +301,12 @@ function getNewName(fullPath, index) {
 
 function getFilteredSorted() {
   const q = filterQuery.toLowerCase();
-  let result = files.map((f, i) => ({ ...f, originalIndex: i, newName: getNewName(f.name, i) }));
+  const hasSelection = selectedNames.size > 0;
+  let result = files.map((f, i) => ({
+    ...f,
+    originalIndex: i,
+    newName: (!hasSelection || selectedNames.has(f.name)) ? getNewName(f.name, i) : f.name
+  }));
   if (q) result = result.filter(f =>
     f.name.toLowerCase().includes(q) || f.newName.toLowerCase().includes(q)
   );
@@ -343,6 +353,8 @@ function updatePreview() {
   if (totalCount === 0) {
     previewTbody.innerHTML = '<tr class="empty-row"><td colspan="4">Upload files to see a preview</td></tr>';
     downloadBtn.disabled = true;
+    applyBtn.disabled = true;
+    applyConfirm.classList.add('hidden');
     dupeWarn.classList.add('hidden');
     selectAll.checked = false;
     selectAll.indeterminate = false;
@@ -351,9 +363,13 @@ function updatePreview() {
   }
 
   downloadBtn.disabled = false;
+  applyBtn.disabled = false;
 
-  // Duplicate detection across ALL files (not just visible)
-  const allNewNames = files.map(({ name }, i) => getNewName(name, i));
+  // Duplicate detection across ALL files (not just visible), respecting selection scope
+  const hasSelectionForDupes = selectedNames.size > 0;
+  const allNewNames = files.map(({ name }, i) =>
+    (!hasSelectionForDupes || selectedNames.has(name)) ? getNewName(name, i) : name
+  );
   const seen = new Set(), dupes = new Set();
   for (const n of allNewNames) { if (seen.has(n)) dupes.add(n); seen.add(n); }
   dupeWarn.classList.toggle('hidden', dupes.size === 0);
@@ -476,6 +492,20 @@ function parseAndApplyCSV(text) {
 
 // ── Download ───────────────────────────────────────────────────────────────
 
+function applyRename() {
+  if (!files.length) return;
+  const hasSelection = selectedNames.size > 0;
+  const targets = hasSelection
+    ? files.filter(f => selectedNames.has(f.name))
+    : files;
+  targets.forEach((f) => {
+    if (!f.originalName) f.originalName = f.name;
+    f.name = getNewName(f.name, files.indexOf(f));
+  });
+  selectedNames.clear();
+  updatePreview();
+}
+
 async function downloadZip() {
   if (!files.length) return;
 
@@ -512,7 +542,7 @@ async function downloadZip() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } finally {
     downloadBtn.disabled = false;
-    downloadBtn.textContent = 'Rename & Download ZIP';
+    downloadBtn.textContent = 'Download ZIP';
   }
 }
 
@@ -572,18 +602,13 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePreview();
   });
 
-  // Row checkbox delegation — update Set without full re-render
+  // Row checkbox delegation — full re-render needed so selection scope is reflected in Renamed column
   previewTbody.addEventListener('change', e => {
     const cb = e.target.closest('.row-check');
     if (!cb) return;
     if (cb.checked) selectedNames.add(cb.dataset.name);
     else            selectedNames.delete(cb.dataset.name);
-    updateSelectionBar();
-    const allBoxes = [...previewTbody.querySelectorAll('.row-check')];
-    const allChk   = allBoxes.every(c => c.checked);
-    const someChk  = allBoxes.some(c => c.checked);
-    selectAll.checked       = allChk;
-    selectAll.indeterminate = someChk && !allChk;
+    updatePreview();
   });
 
   // Delete selected
@@ -676,7 +701,32 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tab-rules').addEventListener('input',  debouncedUpdatePreview);
   document.getElementById('tab-rules').addEventListener('change', debouncedUpdatePreview);
 
-  // Download
+  // Apply Rename + Download
+  applyBtn.addEventListener('click', () => {
+    if (selectedNames.size > 0) {
+      const sel = selectedNames.size;
+      const tot = files.length;
+      applyConfirmMsg.textContent =
+        `Only ${sel} of ${tot} file${tot !== 1 ? 's' : ''} ${sel !== 1 ? 'are' : 'is'} selected — the rename will apply to those ${sel} only.`;
+      applyConfirm.classList.remove('hidden');
+      applyBtn.disabled = true;
+      downloadBtn.disabled = true;
+    } else {
+      applyRename();
+    }
+  });
+
+  applyConfirmYes.addEventListener('click', () => {
+    applyConfirm.classList.add('hidden');
+    applyRename();
+  });
+
+  applyConfirmNo.addEventListener('click', () => {
+    applyConfirm.classList.add('hidden');
+    applyBtn.disabled = false;
+    downloadBtn.disabled = false;
+  });
+
   downloadBtn.addEventListener('click', downloadZip);
 
   updatePreview();
