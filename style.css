@@ -50,6 +50,52 @@ body {
   margin-top: 2px;
 }
 
+/* ── Step guide ──────────────────────────────────────────── */
+.step-guide {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.step { display: flex; align-items: center; gap: 8px; }
+.step-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--text-muted);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.step-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+.step.current .step-num   { background: var(--accent); }
+.step.current .step-label { color: var(--accent); }
+.step.done .step-num       { background: var(--success-fg); }
+.step.done .step-label     { color: var(--text); }
+.step-line {
+  flex: 1;
+  max-width: 60px;
+  height: 2px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.step-line.done { background: var(--success-fg); }
+
 /* ── Layout ──────────────────────────────────────────────── */
 .app-layout {
   display: grid;
